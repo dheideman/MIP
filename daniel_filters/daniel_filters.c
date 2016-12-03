@@ -24,8 +24,8 @@ void* write_csv();
 // variable declarations
 imu_data_t data;
 float gyro_angle;
-d_filter_t low_pass;
-d_filter_t high_pass;
+d_filter_t lpass;
+d_filter_t hpass;
 
 /*******************************************************************************
 * int main() 
@@ -65,11 +65,14 @@ int main()
   set_imu_interrupt_func(&imu_callback);
 
   // Initialize filters
-  low_pass   = create_first_order_lowpass(1.0/(float)WRITE_FREQUENCY, TIME_CONSTANT);
-  high_pass  = create_first_order_highpass(1.0/(float)WRITE_FREQUENCY, TIME_CONSTANT);
-  reset_filter(&low_pass);
-  reset_filter(&high_pass);
+  //float dt = 1.0/(float)WRITE_FREQUENCY;
+  lpass   = create_first_order_lowpass(1.0/(float)WRITE_FREQUENCY, TIME_CONSTANT);
+  hpass  = create_first_order_highpass(1.0/(float)WRITE_FREQUENCY, TIME_CONSTANT);
+  //reset_filter(&low_pass);
+  //reset_filter(&high_pass);
 
+  printf("dt:  %f \n",1.0/( (float) WRITE_FREQUENCY ));
+  printf("tau: %f \n",(float) TIME_CONSTANT);
   // done initializing so set state to RUNNING
 	set_state(RUNNING);
   
@@ -93,10 +96,12 @@ int main()
 
   // Say goodbye
   printf("Goodbye Cruel World\n");
-	
+  
+  print_filter_details(&lpass);
+
   // exit cleanly
-	destroy_filter(&low_pass);
-  destroy_filter(&high_pass);
+	destroy_filter(&lpass);
+  destroy_filter(&hpass);
   power_off_imu();
   cleanup_cape();
   return 0;
@@ -147,20 +152,20 @@ int on_pause_pressed()
 void* write_imu(void* ptr)
 {
   float lp;
-  float hp;
+//  float hp;
   float x;
 
   while(get_state()!=EXITING)
   {
-    x = data.gyro[0];
+    x =1;// data.gyro[0];
 
-    lp = march_filter(&low_pass, x);
-    hp = march_filter(&high_pass, x);
+    lp = march_filter(&lpass, x);
+  //  hp = march_filter(&hpass, x);
     
-    printf("\r");
-    printf("  %7.4f | %7.4f | %7.4f | %7.4f ",x,lp,hp,lp+hp);
-    fflush(stdout);
-    
+//    printf("\r");
+//    printf("  %7.4f | %7.4f | %7.4f | %7.4f ",x,lp,hp,lp+hp);
+//    fflush(stdout);
+    printf(" %f7.2  %f7.2 %llu \n",x,lp,lpass.step);
     // always sleep at some point
     usleep(1000000/WRITE_FREQUENCY);
   }
