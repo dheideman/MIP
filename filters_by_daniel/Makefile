@@ -1,5 +1,5 @@
 # This is a general use makefile for robotics cape projects written in C.
-TARGET = daniel_filters
+TARGET = filters_by_daniel
 
 
 TOUCH 	 := $(shell touch *)

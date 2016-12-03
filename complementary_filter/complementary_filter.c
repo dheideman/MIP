@@ -7,12 +7,11 @@
 #include <usefulincludes.h>
 #include <roboticscape.h>
 
-
 // Hash defines
-#define SAMPLE_FREQUENCY   20
+#define SAMPLE_FREQUENCY   100
 #define WRITE_FREQUENCY    10
-#define FILENAME           "angles.csv"
-#define TIME_CONSTANT      2.0
+#define FILENAME           "filtered_angles.csv"
+#define TIME_CONSTANT      1.0
 
 // function declarations
 int on_pause_pressed();
@@ -23,7 +22,9 @@ void* write_csv();
 
 // variable declarations
 imu_data_t data;
-float gyro_angle;
+float g_angle;
+float a_angle;
+float bbb_angle;
 d_filter_t lpass;
 d_filter_t hpass;
 
@@ -59,19 +60,20 @@ int main()
     return -1;
   }
 
-  // Initialize gyro_angle to 0
-  gyro_angle = 0.0;
-      
+  // Initialize gyro angle to 0
+  g_angle   = 0.0;
+  a_angle   = 0.0;
+  bbb_angle = 0.0;
+  
   set_imu_interrupt_func(&imu_callback);
 
   // Initialize filters
-  //float dt = 1.0/(float)WRITE_FREQUENCY;
-  lpass   = create_first_order_lowpass(1.0/(float)WRITE_FREQUENCY, TIME_CONSTANT);
-  hpass  = create_first_order_highpass(1.0/(float)WRITE_FREQUENCY, TIME_CONSTANT);
+  lpass   = create_first_order_lowpass(1.0/(float)SAMPLE_FREQUENCY, TIME_CONSTANT);
+  hpass  = create_first_order_highpass(1.0/(float)SAMPLE_FREQUENCY, TIME_CONSTANT);
   //reset_filter(&low_pass);
   //reset_filter(&high_pass);
 
-  printf("dt:  %f \n",1.0/( (float) WRITE_FREQUENCY ));
+  printf("dt:  %f \n",1.0/( (float)SAMPLE_FREQUENCY ));
   printf("tau: %f \n",(float) TIME_CONSTANT);
   // done initializing so set state to RUNNING
 	set_state(RUNNING);
@@ -85,7 +87,7 @@ int main()
   pthread_create(&csv_thread, NULL, write_csv, (void*) NULL);
 
   // print out the state stuff
-  printf("\n  Accel X | LowPass |  H Pass |  Sum \n");
+  printf("\n  a_angle | g_angle | bbb_angle \n");
 
   // Keep looping until state changes to EXITING
 	while(get_state()!=EXITING)
@@ -151,21 +153,12 @@ int on_pause_pressed()
  ******************************************************************************/
 void* write_imu(void* ptr)
 {
-  float lp;
-//  float hp;
-  float x;
-
   while(get_state()!=EXITING)
   {
-    x =1;// data.gyro[0];
-
-    lp = march_filter(&lpass, x);
-  //  hp = march_filter(&hpass, x);
+    printf("\r");
+    printf("  %7.4f | %7.4f | %7.4f ",a_angle,g_angle,bbb_angle);
+    fflush(stdout);
     
-//    printf("\r");
-//    printf("  %7.4f | %7.4f | %7.4f | %7.4f ",x,lp,hp,lp+hp);
-//    fflush(stdout);
-    printf(" %f7.2  %f7.2 %llu \n",x,lp,lpass.step);
     // always sleep at some point
     usleep(1000000/WRITE_FREQUENCY);
   }
@@ -180,9 +173,9 @@ void* write_imu(void* ptr)
 int imu_callback()
 {
   // Do something?
-//  printf("Callback\n"); 
-//  print_imu();
-  gyro_angle += data.gyro[0]/SAMPLE_FREQUENCY*DEG_TO_RAD;
+  g_angle += data.gyro[0]/SAMPLE_FREQUENCY*DEG_TO_RAD;
+  a_angle = atan2(-data.accel[2],data.accel[1]);
+  bbb_angle = march_filter(&hpass,g_angle) + march_filter(&lpass,a_angle);
   return 0;
 }
 
@@ -196,12 +189,12 @@ void* write_csv()
   // Initialize file
   FILE *csv; // pointer to file (stream)
   csv = fopen(FILENAME,"w");
-  fprintf(csv,"time,accel_angle,gyro_angle\n");
+  fprintf(csv,"time,a_angle,g_angle,bbb_angle\n");
   float i = 0.0;
 
   while(get_state()!=EXITING)
   {
-    fprintf(csv,"%f,%f,%f\n",i/WRITE_FREQUENCY,atan2(-data.accel[2],data.accel[1]),gyro_angle);
+    fprintf(csv,"%f,%f,%f,%f\n",i/WRITE_FREQUENCY,a_angle,g_angle,bbb_angle);
     i++;
     usleep(1000000/WRITE_FREQUENCY);
   }
