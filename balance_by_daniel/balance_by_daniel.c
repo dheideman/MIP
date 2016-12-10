@@ -96,9 +96,21 @@ int main()
   // done initializing so set state to RUNNING
   set_state(RUNNING);
   
+  printf("\n\n");
+
   // Keep looping until state changes to EXITING
 	while(get_state()!=EXITING)
   {
+    printf("\r");
+    printf(" %7.2f |", mip_state.theta);
+    printf(" %7.2f |", mip_state.phi);
+    printf(" %7.2f |", mip_state.u);
+    printf(" %d |", mip_state.armed);
+    printf(" %d |", get_state());
+    fflush(stdout);
+    
+
+      
     // We'll deal with everything in different threads, so just chill.
 		usleep(100000);
 	}
@@ -169,6 +181,7 @@ int reset_controllers()
 int disarm_mip()
  {
   disable_motors();
+  //set_motor_all(0);
   mip_state.armed = 0;
   return 0;
  }
@@ -203,22 +216,20 @@ void* inner_loop(void* ptr)
   
   float theta_error;
   
-  while(get_state()!=EXITING)
+  while(get_state()==RUNNING)
   {
-    if(get_state()==RUNNING)
+    // Run balance filter
+    theta_error = mip_refs.theta_r - mip_state.theta;
+    mip_state.u = step_filter(&iloop,theta_error);
+    if(mip_state.armed)
     {
-      // Run balance filter
-      theta_error = mip_refs.theta_r - mip_state.theta;
-      mip_state.u = step_filter(&iloop,theta_error);
-      if(mip_state.armed)
-      {
-        set_motor(MOTOR_CHANNEL_L, MOTOR_POLARITY_L * mip_state.u); 
-        set_motor(MOTOR_CHANNEL_R, MOTOR_POLARITY_R * mip_state.u);
-      }
+      set_motor(MOTOR_CHANNEL_L, MOTOR_POLARITY_L * mip_state.u); 
+      set_motor(MOTOR_CHANNEL_R, MOTOR_POLARITY_R * mip_state.u);
     }
     // always sleep at some point
     usleep(1000000/INNER_LOOP_FREQUENCY);
   }
+  //disarm_mip();
   return NULL;
 }
 
@@ -237,19 +248,16 @@ void* outer_loop()
   
   float phi_error;
 
-  while(get_state()!=EXITING)
+  while(get_state()==RUNNING)
   {
-    if(get_state()==RUNNING)
-    {
-      mip_state.phi_right = (get_encoder_pos(ENCODER_CHANNEL_R) * TWO_PI)\
-                            /(ENCODER_POLARITY_R * GEAR_RATIO * ENCODER_TICKS);
-      mip_state.phi_left  = (get_encoder_pos(ENCODER_CHANNEL_L) * TWO_PI)\
-                            /(ENCODER_POLARITY_L * GEAR_RATIO * ENCODER_TICKS);
-                            
-      mip_state.phi = (mip_state.phi_right + mip_state.phi_left)/2.0;
-      phi_error = mip_refs.phi_r - mip_state.phi + mip_state.theta;
-      mip_refs.theta_r = step_filter(&oloop,phi_error);
-    }
+    mip_state.phi_right = (get_encoder_pos(ENCODER_CHANNEL_R) * TWO_PI)\
+                          /(ENCODER_POLARITY_R * GEAR_RATIO * ENCODER_TICKS);
+    mip_state.phi_left  = (get_encoder_pos(ENCODER_CHANNEL_L) * TWO_PI)\
+                          /(ENCODER_POLARITY_L * GEAR_RATIO * ENCODER_TICKS);
+                          
+    mip_state.phi = (mip_state.phi_right + mip_state.phi_left)/2.0;
+    phi_error = mip_refs.phi_r - mip_state.phi + mip_state.theta;
+    //mip_refs.theta_r = step_filter(&oloop,phi_error);
     usleep(1000000/OUTER_LOOP_FREQUENCY);
   }
   return NULL;
