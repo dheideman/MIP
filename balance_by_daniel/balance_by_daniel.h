@@ -29,7 +29,7 @@
 #define D2_ORDER   1
 #define D2_NUM     { 1.0000, -0.9882 }
 #define D2_DEN     { 1.0000, -0.6065 }
-#define D2_SAT     0.75
+#define D2_SAT     0.5
 
 // Wiring Parameters
 #define MOTOR_CHANNEL_L       3
