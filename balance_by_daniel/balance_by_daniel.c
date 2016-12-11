@@ -212,7 +212,7 @@ void* inner_loop(void* ptr)
   float dt = 1.0/INNER_LOOP_FREQUENCY;
   float iloop_num[] = D1_NUM;
   float iloop_den[] = D1_DEN;
-  iloop = create_daniel_filter(D1_ORDER,dt,iloop_num,iloop_den);
+  iloop = create_daniel_filter(D1_ORDER,dt,iloop_num,iloop_den,D1_GAIN);
   
   float theta_error;
   
@@ -244,7 +244,7 @@ void* outer_loop()
   float dt = 1.0/OUTER_LOOP_FREQUENCY;
   float oloop_num[] = D2_NUM;
   float oloop_den[] = D2_DEN;
-  oloop = create_daniel_filter(D2_ORDER,dt,oloop_num,oloop_den);
+  oloop = create_daniel_filter(D2_ORDER,dt,oloop_num,oloop_den,D2_GAIN);
   
   float phi_error;
 
@@ -289,28 +289,28 @@ int initialize_angle_filters()
   float dt = 1.0/(float)SAMPLE_FREQUENCY;
   float lpass_num[] = {dt/TIME_CONSTANT,0};
   float lpass_den[] = {1, dt/TIME_CONSTANT-1};
-  lpass = create_daniel_filter(1,dt,lpass_num,lpass_den);
+  lpass = create_daniel_filter(1,dt,lpass_num,lpass_den,1);
   
   float hpass_num[] = {1-dt/TIME_CONSTANT,dt/TIME_CONSTANT-1};
   float hpass_den[] = {1,dt/TIME_CONSTANT-1};
-  hpass  = create_daniel_filter(1,dt,hpass_num,hpass_den);
+  hpass  = create_daniel_filter(1,dt,hpass_num,hpass_den,1);
   
   return 1;
 }
 
 /*******************************************************************************
- * daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den)
+ * daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain)
  *
  * Create a filter.  Yay!
  ******************************************************************************/
-daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den)
+daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain)
 {
   daniel_filter_t filter;
   int i;
   int n = 3-order;
   filter.order = order;
   filter.dt = dt;
-  filter.gain = 1;
+  filter.gain = gain;
   for(i=0; i<n; i++)
   {
     filter.num[i] = 0;
