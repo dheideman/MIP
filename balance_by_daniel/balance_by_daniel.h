@@ -22,12 +22,14 @@
 #define D1_ORDER   2
 #define D1_NUM     { 1.0000, -1.9470, 0.9480 }
 #define D1_DEN     { 1.0000, -1.9048, 0.9048 }
+#define D1_SAT     1
 
 // Outer Loop Controller
 #define D2_GAIN    0.20766
 #define D2_ORDER   1
 #define D2_NUM     { 1.0000, -0.9882 }
 #define D2_DEN     { 1.0000, -0.6065 }
+#define D2_SAT     0.75
 
 // Wiring Parameters
 #define MOTOR_CHANNEL_L       3
@@ -53,6 +55,7 @@ typedef struct daniel_filter_t
   int order;
   float dt;
   float gain;
+  float sat;
   uint64_t step;
   int initialized;
 
