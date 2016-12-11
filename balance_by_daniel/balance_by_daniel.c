@@ -19,7 +19,7 @@ int reset_controllers();
 int disarm_mip();
 int arm_mip();
 int zero_filter();
-daniel_filter_t create_daniel_filter(int order,float dt,float* num,float* den);
+daniel_filter_t create_daniel_filter(int order,float dt,float* num,float* den, float gain);
 float step_filter(daniel_filter_t* filter, float new_input);
 
 // variable declarations
