@@ -132,9 +132,9 @@ int main()
 *******************************************************************************/
 int on_pause_released()
 {
-	// toggle betewen paused and running modes
-	if(get_state()==RUNNING)   		set_state(PAUSED);
-	else if(get_state()==PAUSED)	set_state(RUNNING);
+  // toggle betewen paused and running modes
+  if(get_state()==RUNNING)   		set_state(PAUSED);
+  else if(get_state()==PAUSED)	set_state(RUNNING);
   return 0;
 }
 
@@ -273,7 +273,8 @@ int imu_callback()
   // Do something?
   g_angle += data.gyro[0]/SAMPLE_FREQUENCY*DEG_TO_RAD;
   a_angle = atan2(-data.accel[2],data.accel[1]);
-  mip_state.theta = -1*step_filter(&hpass,g_angle) + step_filter(&lpass,a_angle);
+  mip_state.theta = step_filter(&hpass,g_angle) + step_filter(&lpass,a_angle)\
+                    - CAPE_MOUNT_ANGLE;
   return 0;
 }
 
