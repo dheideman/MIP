@@ -7,7 +7,7 @@
 // Timing
 #define SAMPLE_FREQUENCY       200
 #define INNER_LOOP_FREQUENCY   200
-#define OUTER_LOOP_FREQUENCY   10
+#define OUTER_LOOP_FREQUENCY   20
 #define TIME_CONSTANT          1.0
 
 // MiP Physical Properties
@@ -29,7 +29,7 @@
 #define D2_ORDER   1
 #define D2_NUM     { 1.0000, -0.9882 }
 #define D2_DEN     { 1.0000, -0.6065 }
-#define D2_SAT     0.5
+#define D2_SAT     0.3
 
 // Wiring Parameters
 #define MOTOR_CHANNEL_L       3
@@ -44,7 +44,7 @@
 // Safety Parameters
 #define TIP_ANGLE        0.75
 #define START_ANGLE      0.3
-#define PICKUP_TIME      0.5
+#define START_DELAY      0.5
 #define PHI_REF          0.0
 
 

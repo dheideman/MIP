@@ -45,8 +45,11 @@ int main()
 {
 	// always initialize cape library first
 	initialize_cape();
-
-	// do your own initialization here
+  
+  // Initialize the mip as disarmed
+  disarm_mip();
+	
+  // do your own initialization here
   printf("\n");
   printf("----------------------------\n");
   printf("Welcome to balance_by_daniel\n");
@@ -82,6 +85,12 @@ int main()
   
   set_imu_interrupt_func(&imu_callback);
   
+  // done initializing so set state to RUNNING
+  set_state(RUNNING);
+
+  // pause to let some important initialization to occur
+  usleep(100000);
+  
   // start inner loop
   pthread_t inner_loop_thread;
   pthread_create(&inner_loop_thread, NULL, inner_loop, (void*) NULL);
@@ -90,26 +99,47 @@ int main()
   pthread_t outer_loop_thread;
   pthread_create(&outer_loop_thread, NULL, outer_loop, (void*) NULL);
   
-  // Arm the mip
-  arm_mip();
-  
-  // done initializing so set state to RUNNING
-  set_state(RUNNING);
-  
+  usleep(1000000*START_DELAY);
   printf("\n\n");
+  //printf(" %7.3f |", hpass.num[0]);
+  //printf(" %7.3f |", hpass.num[1]);
+  //printf(" %7.3f |", hpass.num[2]);
+  //printf(" %7.3f |", hpass.num[3]);
+  //printf("\n");
+  //printf(" %7.3f |", hpass.den[0]);
+  //printf(" %7.3f |", hpass.den[1]);
+  //printf(" %7.3f |", hpass.den[2]);
+  //printf(" %7.3f |", hpass.den[3]);
+  //printf("\n");
+
 
   // Keep looping until state changes to EXITING
 	while(get_state()!=EXITING)
   {
+    /*
     printf("\r");
-    printf(" %7.2f |", mip_refs.theta_r);
     printf(" %7.2f |", mip_state.theta);
-    printf(" %7.2f |", mip_state.u);
+    printf(" %7.2f |", a_angle);
+    printf(" %10.5f |", lpass.outputs[0]);
+    printf(" %10.5f |", lpass.outputs[1]);
+    printf(" %10.5f |", lpass.outputs[2]);
+    printf(" %10.5f |", lpass.outputs[3]);
+    //printf(" %7.2f |", iloop.num[2]);
+    //printf(" %7.2f |", iloop.num[3]);
     //printf(" %d |", mip_state.armed);
     //printf(" %d |", get_state());
     fflush(stdout);
-    
+    // */
 
+    if(mip_state.armed)
+    {
+      //printf("armed\n");
+      if(fabs(mip_state.theta)>TIP_ANGLE || get_state()==PAUSED) disarm_mip();
+    }
+    else
+    {
+      if(fabs(mip_state.theta)<START_ANGLE && get_state()==RUNNING) arm_mip();
+    }
       
     // We'll deal with everything in different threads, so just chill.
 		usleep(100000);
@@ -133,8 +163,16 @@ int main()
 int on_pause_released()
 {
   // toggle betewen paused and running modes
-  if(get_state()==RUNNING)   		set_state(PAUSED);
-  else if(get_state()==PAUSED)	set_state(RUNNING);
+  if(get_state()==RUNNING)
+  {
+    set_state(PAUSED);
+    set_led(RED,ON);
+  }
+  else if(get_state()==PAUSED)
+  {
+    set_state(RUNNING);
+    set_led(RED,OFF);
+  }
   return 0;
 }
 
@@ -216,7 +254,7 @@ void* inner_loop(void* ptr)
   
   float theta_error;
   
-  while(get_state()==RUNNING)
+  while(get_state()!=EXITING)
   {
     // Run balance filter
     theta_error = mip_refs.theta_r - mip_state.theta;
@@ -248,7 +286,7 @@ void* outer_loop()
   
   float phi_error;
 
-  while(get_state()==RUNNING)
+  while(get_state()!=EXITING)
   {
     mip_state.phi_right = (get_encoder_pos(ENCODER_CHANNEL_R) * TWO_PI)\
                           /(ENCODER_POLARITY_R * GEAR_RATIO * ENCODER_TICKS);
@@ -256,7 +294,7 @@ void* outer_loop()
                           /(ENCODER_POLARITY_L * GEAR_RATIO * ENCODER_TICKS);
                           
     mip_state.phi = (mip_state.phi_right + mip_state.phi_left)/2.0;
-    phi_error = mip_refs.phi_r - mip_state.phi + mip_state.theta;
+    phi_error = mip_refs.phi_r - mip_state.phi - mip_state.theta;
     mip_refs.theta_r = step_filter(&oloop,phi_error);
     usleep(1000000/OUTER_LOOP_FREQUENCY);
   }
@@ -320,8 +358,8 @@ daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den
   }
   for(i=n; i<4; i++)
   {
-    filter.num[i] = num[i];
-    filter.den[i] = den[i];
+    filter.num[i] = num[i-n];
+    filter.den[i] = den[i-n];
     filter.inputs[i]  = 0;
     filter.outputs[i] = 0;
   }
@@ -370,8 +408,10 @@ float step_filter(daniel_filter_t* filter, float new_input)
     else if(new_output < -1*filter->sat) new_output = -1*filter->sat;
   }
   
-  filter->outputs[0] = new_output;
+  filter->outputs[n] = new_output;
   
+  //printf("%8.4f\n",new_output);
+
   filter->step++;
   return new_output;
 }
