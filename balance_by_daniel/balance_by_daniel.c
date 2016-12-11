@@ -103,7 +103,7 @@ int main()
   {
     printf("\r");
     printf(" %7.2f |", mip_refs.theta_r);
-    printf(" %7.2f |", mip_refs.phi_r);
+    printf(" %7.2f |", mip_state.theta);
     printf(" %7.2f |", mip_state.u);
     //printf(" %d |", mip_state.armed);
     //printf(" %d |", get_state());
