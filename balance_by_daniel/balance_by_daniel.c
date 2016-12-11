@@ -102,11 +102,11 @@ int main()
 	while(get_state()!=EXITING)
   {
     printf("\r");
-    printf(" %7.2f |", mip_state.theta);
-    printf(" %7.2f |", mip_state.phi);
+    printf(" %7.2f |", mip_refs.theta_r);
+    printf(" %7.2f |", mip_refs.phi_r);
     printf(" %7.2f |", mip_state.u);
-    printf(" %d |", mip_state.armed);
-    printf(" %d |", get_state());
+    //printf(" %d |", mip_state.armed);
+    //printf(" %d |", get_state());
     fflush(stdout);
     
 
@@ -257,7 +257,7 @@ void* outer_loop()
                           
     mip_state.phi = (mip_state.phi_right + mip_state.phi_left)/2.0;
     phi_error = mip_refs.phi_r - mip_state.phi + mip_state.theta;
-    //mip_refs.theta_r = step_filter(&oloop,phi_error);
+    mip_refs.theta_r = step_filter(&oloop,phi_error);
     usleep(1000000/OUTER_LOOP_FREQUENCY);
   }
   return NULL;
