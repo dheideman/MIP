@@ -19,7 +19,7 @@ int reset_controllers();
 int disarm_mip();
 int arm_mip();
 int zero_filter();
-daniel_filter_t create_daniel_filter(int order,float dt,float* num,float* den, float gain);
+daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain, float sat);
 float step_filter(daniel_filter_t* filter, float new_input);
 
 // variable declarations
@@ -212,7 +212,7 @@ void* inner_loop(void* ptr)
   float dt = 1.0/INNER_LOOP_FREQUENCY;
   float iloop_num[] = D1_NUM;
   float iloop_den[] = D1_DEN;
-  iloop = create_daniel_filter(D1_ORDER,dt,iloop_num,iloop_den,D1_GAIN);
+  iloop = create_daniel_filter(D1_ORDER,dt,iloop_num,iloop_den,D1_GAIN,D1_SAT);
   
   float theta_error;
   
@@ -244,7 +244,7 @@ void* outer_loop()
   float dt = 1.0/OUTER_LOOP_FREQUENCY;
   float oloop_num[] = D2_NUM;
   float oloop_den[] = D2_DEN;
-  oloop = create_daniel_filter(D2_ORDER,dt,oloop_num,oloop_den,D2_GAIN);
+  oloop = create_daniel_filter(D2_ORDER,dt,oloop_num,oloop_den,D2_GAIN,D2_SAT);
   
   float phi_error;
 
@@ -289,21 +289,21 @@ int initialize_angle_filters()
   float dt = 1.0/(float)SAMPLE_FREQUENCY;
   float lpass_num[] = {dt/TIME_CONSTANT,0};
   float lpass_den[] = {1, dt/TIME_CONSTANT-1};
-  lpass = create_daniel_filter(1,dt,lpass_num,lpass_den,1);
+  lpass = create_daniel_filter(1,dt,lpass_num,lpass_den,1,0);
   
   float hpass_num[] = {1-dt/TIME_CONSTANT,dt/TIME_CONSTANT-1};
   float hpass_den[] = {1,dt/TIME_CONSTANT-1};
-  hpass  = create_daniel_filter(1,dt,hpass_num,hpass_den,1);
+  hpass  = create_daniel_filter(1,dt,hpass_num,hpass_den,1,0);
   
   return 1;
 }
 
 /*******************************************************************************
- * daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain)
+ * daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain, float sat)
  *
  * Create a filter.  Yay!
  ******************************************************************************/
-daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain)
+daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den, float gain, float sat)
 {
   daniel_filter_t filter;
   int i;
@@ -325,6 +325,7 @@ daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den
     filter.inputs[i]  = 0;
     filter.outputs[i] = 0;
   }
+  filter.sat = sat;
   filter.step = 0;
   filter.initialized = 1;
   return filter;
@@ -362,7 +363,13 @@ float step_filter(daniel_filter_t* filter, float new_input)
   
   // Divide out a0
   new_output = new_output/filter->den[n];
-
+  
+  if(filter->sat > 0)
+  {
+    if(new_output > filter->sat) new_output = filter->sat;
+    else if(new_output < -1*filter->sat) new_output = -1*filter->sat;
+  }
+  
   filter->outputs[0] = new_output;
   
   filter->step++;
