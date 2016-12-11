@@ -319,8 +319,8 @@ daniel_filter_t create_daniel_filter(int order, float dt, float* num, float* den
   }
   for(i=n; i<4; i++)
   {
-    filter.num[i] = num[i-n];
-    filter.den[i] = den[i-n];
+    filter.num[i] = num[i];
+    filter.den[i] = den[i];
     filter.inputs[i]  = 0;
     filter.outputs[i] = 0;
   }
@@ -342,12 +342,12 @@ float step_filter(daniel_filter_t* filter, float new_input)
   int n = 3 - filter->order;
   
   // Advance inputs and outputs
-  for(i=n; i<3; i++)
+  for(i=3; i>n; i--)
   {
-    filter->inputs[i] = filter->inputs[i+1];
-    filter->outputs[i] = filter->outputs[i+1];
+    filter->inputs[i] = filter->inputs[i-1];
+    filter->outputs[i] = filter->outputs[i-1];
   }
-  filter->inputs[3] = new_input;
+  filter->inputs[n] = new_input;
   
   // Calculate output
   for(i=n; i<4; i++)
@@ -362,7 +362,7 @@ float step_filter(daniel_filter_t* filter, float new_input)
   // Divide out a0
   new_output = new_output/filter->den[n];
 
-  filter->outputs[3] = new_output;
+  filter->outputs[0] = new_output;
   
   filter->step++;
   return new_output;
