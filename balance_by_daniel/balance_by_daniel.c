@@ -274,7 +274,7 @@ int imu_callback()
   g_angle += data.gyro[0]/SAMPLE_FREQUENCY*DEG_TO_RAD;
   a_angle = atan2(-data.accel[2],data.accel[1]);
   mip_state.theta = step_filter(&hpass,g_angle) + step_filter(&lpass,a_angle)\
-                    - CAPE_MOUNT_ANGLE;
+                    + CAPE_MOUNT_ANGLE;
   return 0;
 }
 
